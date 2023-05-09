@@ -1,13 +1,17 @@
+import dataclasses
+import decimal
 import os
+import typing
+import uuid
+import datetime
 
+import sqlalchemy
 from flask import Flask, current_app, template_rendered, request_started, request_tearing_down, request_finished, \
-    got_request_exception, jsonify
+    got_request_exception, jsonify, request
 from werkzeug.exceptions import HTTPException
 
-import auth
-import blog
-import db
-from common import ApiResponse
+from models import init_db
+from common import ApiResponse, Serializable
 
 
 def connect_signal(app):
@@ -38,38 +42,67 @@ def connect_signal(app):
 
 
 def init_datasource(app):
-    db.init_app(app)
+    init_db(app)
 
 
 def add_url_mapping(app):
-    app.register_blueprint(auth.bp)
-    app.register_blueprint(blog.bp)
-    db.init_app(app)
-    app.add_url_rule('/', endpoint='index')
+    @app.route('/')
+    def index():
+        return jsonify(ApiResponse.success())
+
+    from bp import user
+
+    app.register_blueprint(user.bp)
 
 
 def add_error_handler(app: Flask):
-    @app.errorhandler(Exception)
-    def handle_all(exp):
-        current_app.logger.error('服务器异常', exp)
-        return ApiResponse.server_error()
-    jsonify
-
-    @app.errorhandler(HTTPException)
-    def handle_http(exp):
-        current_app.logger.error('Http异常', exp)
-        return ApiResponse.server_error()
+    # @app.errorhandler(Exception)
+    # def handle_all(exp):
+    #     current_app.logger.error('服务器异常', exp.args, request)
+    #     return ApiResponse.server_error()
+    #
+    # @app.errorhandler(HTTPException)
+    # def handle_http(exp):
+    #     current_app.logger.error('Http异常', exp.args, request)
+    #     return ApiResponse.server_error()
+    pass
 
 
 def config_app(app, test_config=None):
     app.config.from_mapping(
         SECRET_KEY='dev',
-        DATABASE=os.path.join(app.instance_path, 'flaskr.sqlite'),
+        # DATABASE=os.path.join(app.instance_path, 'flaskr.sqlite'),
     )
+
+    def default(o: typing.Any) -> typing.Any:
+        if isinstance(o, Serializable):
+            return dict(o)
+
+        if isinstance(o, datetime.datetime):
+            return datetime.datetime.strftime(o, "%Y-%m-%d %H:%M:%S")
+
+        if isinstance(o, datetime.date):
+            return datetime.date.strftime(o, '%Y-%m-%d')
+
+        if isinstance(o, (decimal.Decimal, uuid.UUID)):
+            return str(o)
+
+        if dataclasses and dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+
+        if hasattr(o, "__html__"):
+            return str(o.__html__())
+
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
+    app.json.default = default
+    app.json.ensure_ascii = False
+    app.json.sort_keys = False
+    app.json.compact = True
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
-        app.config.from_pyfile('config.py', silent=True)
+        app.config.from_pyfile('config.py')
     else:
         # load the test config if passed in
         app.config.from_mapping(test_config)
@@ -90,6 +123,7 @@ def create_app(test_config=None):
     add_url_mapping(app)
     connect_signal(app)
     add_error_handler(app)
+
     return app
 
 
