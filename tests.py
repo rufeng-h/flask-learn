@@ -18,3 +18,9 @@ class TestSerialize(TestCase):
 
     def test_date(self):
         self.assertTrue(isinstance(datetime.datetime.now(), datetime.date))
+
+    def test_exp(self):
+        try:
+            1 / 0
+        except ZeroDivisionError as e:
+            print(dir(e))

@@ -1,17 +1,15 @@
 import dataclasses
+import datetime
 import decimal
-import os
 import typing
 import uuid
-import datetime
 
-import sqlalchemy
 from flask import Flask, current_app, template_rendered, request_started, request_tearing_down, request_finished, \
-    got_request_exception, jsonify, request
+    got_request_exception, jsonify
 from werkzeug.exceptions import HTTPException
 
-from models import init_db
 from common import ApiResponse, Serializable
+from models import init_db
 
 
 def connect_signal(app):
@@ -24,7 +22,7 @@ def connect_signal(app):
         current_app.logger.info(f'request started, the sender is {sender}')
 
     @request_tearing_down.connect_via(app)
-    def tear_down(sender, exc=None):
+    def tear_down(sender, *, exc=None):
         current_app.logger.info(f'request tear down {exc}, the sender is {sender}')
 
     @request_finished.connect_via(app)
@@ -34,11 +32,6 @@ def connect_signal(app):
     @got_request_exception.connect_via(app)
     def req_exp(sender, exception):
         current_app.logger.info(f'request exception {exception.args}, the sender is {sender}')
-
-    def exp_func():
-        raise ValueError('')
-
-    app.add_url_rule('/exp', view_func=exp_func)
 
 
 def init_datasource(app):
@@ -56,15 +49,17 @@ def add_url_mapping(app):
 
 
 def add_error_handler(app: Flask):
-    # @app.errorhandler(Exception)
-    # def handle_all(exp):
-    #     current_app.logger.error('服务器异常', exp.args, request)
-    #     return ApiResponse.server_error()
-    #
-    # @app.errorhandler(HTTPException)
-    # def handle_http(exp):
-    #     current_app.logger.error('Http异常', exp.args, request)
-    #     return ApiResponse.server_error()
+    @app.errorhandler(Exception)
+    def handle_all(exp):
+        current_app.logger.error(exp)
+        return jsonify(ApiResponse.server_error())
+
+    @app.errorhandler(HTTPException)
+    def handle_http(exp):
+        current_app.logger.error(exp)
+        print(dir(exp))
+        return jsonify(ApiResponse.server_error())
+
     pass
 
 
@@ -106,12 +101,6 @@ def config_app(app, test_config=None):
     else:
         # load the test config if passed in
         app.config.from_mapping(test_config)
-
-    # ensure the instance folder exists
-    try:
-        os.makedirs(app.instance_path)
-    except OSError:
-        pass
 
 
 def create_app(test_config=None):

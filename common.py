@@ -28,6 +28,3 @@ class ApiResponse(Serializable):
     @classmethod
     def server_error(cls):
         return cls(500, '服务器异常', None)
-
-    def __getitem__(self, key):
-        return getattr(self, key)
