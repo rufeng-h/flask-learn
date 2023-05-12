@@ -6,10 +6,11 @@ import uuid
 
 from flask import Flask, current_app, template_rendered, request_started, request_tearing_down, request_finished, \
     got_request_exception, jsonify
+from sqlalchemy import inspect, Column
 from werkzeug.exceptions import HTTPException
 
 from common import ApiResponse, Serializable
-from models import init_db
+from models import init_db, User
 
 
 def connect_signal(app):
@@ -57,10 +58,7 @@ def add_error_handler(app: Flask):
     @app.errorhandler(HTTPException)
     def handle_http(exp):
         current_app.logger.error(exp)
-        print(dir(exp))
         return jsonify(ApiResponse.server_error())
-
-    pass
 
 
 def config_app(app, test_config=None):
@@ -117,4 +115,9 @@ def create_app(test_config=None):
 
 
 if __name__ == '__main__':
-    create_app().run()
+    app = create_app()
+    print(typing.get_args(User.__dict__['__annotations__']['id']))
+    print(User.__dict__)
+    print(User.__mapper__)
+    print(inspect(User))
+    app.run()

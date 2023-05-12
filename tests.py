@@ -2,6 +2,8 @@ import datetime
 import json
 from unittest import TestCase
 
+from sqlalchemy import String, Column
+
 from common import ApiResponse
 from models import User
 
@@ -24,3 +26,6 @@ class TestSerialize(TestCase):
             1 / 0
         except ZeroDivisionError as e:
             print(dir(e))
+
+    def test_type(self):
+        print(Column(String(21)).type.python_type)

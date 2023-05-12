@@ -13,7 +13,12 @@ class UserView(MethodView):
         return jsonify(ApiResponse.success(scalars.all()))
 
     def post(self):
-        print(User(**request.json))
+        """
+        手动反序列化，且不支持嵌套
+        """
+        user = User(**request.json)
+        print(user)
+        print(type(user.username))
         return jsonify(ApiResponse.success())
 
 
